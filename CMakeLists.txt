@@ -199,8 +199,8 @@ if(rclcpp_FOUND)
     DESTINATION lib/${PROJECT_NAME})
 
   install(DIRECTORY
+    config
     launch
-    rviz
     DESTINATION share/${PROJECT_NAME})
 
   ament_package()
