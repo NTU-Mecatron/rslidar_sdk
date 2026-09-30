@@ -241,48 +241,29 @@ inline Packet toRsMsg(const rslidar_msg::msg::RslidarPacket& ros_msg)
 }
 
 class SourcePacketRos : public SourceDriver
-{ 
-public: 
+{
+public:
+  explicit SourcePacketRos(rclcpp::Node & node)
+    : SourceDriver(SourceType::MSG_FROM_ROS_PACKET), node_(node) {}
 
-  virtual void init(const YAML::Node& config);
-
-  SourcePacketRos();
+  void init(const YAML::Node & config) override
+  {
+    SourceDriver::init(config);
+    std::string topic;
+    yamlRead<std::string>(config["ros"], "ros_recv_packet_topic", topic, "rslidar_packets");
+    pkt_sub_ = node_.create_subscription<rslidar_msg::msg::RslidarPacket>(
+      topic, 100, std::bind(&SourcePacketRos::putPacket, this, std::placeholders::_1));
+  }
 
 private:
-  void spin();
-  void putPacket(const rslidar_msg::msg::RslidarPacket::SharedPtr msg) const;
-  std::thread subscription_spin_thread_;
-  std::shared_ptr<rclcpp::Node> node_ptr_;
+  void putPacket(const rslidar_msg::msg::RslidarPacket::SharedPtr msg) const
+  {
+    driver_ptr_->decodePacket(toRsMsg(*msg));
+  }
+
+  rclcpp::Node & node_;
   rclcpp::Subscription<rslidar_msg::msg::RslidarPacket>::SharedPtr pkt_sub_;
 };
-
-SourcePacketRos::SourcePacketRos()
-  : SourceDriver(SourceType::MSG_FROM_ROS_PACKET)
-{
-}
-void SourcePacketRos::spin(){rclcpp::spin(node_ptr_);}  
-void SourcePacketRos::init(const YAML::Node& config)
-{
-  SourceDriver::init(config);
-
-  std::string ros_recv_topic;
-  yamlRead<std::string>(config["ros"], "ros_recv_packet_topic", 
-      ros_recv_topic, "rslidar_packets");
-
-  static int node_index = 0;
-  std::stringstream node_name;
-  node_name << "rslidar_packets_source_" << node_index++;
-
-  node_ptr_.reset(new rclcpp::Node(node_name.str()));
-  pkt_sub_ = node_ptr_->create_subscription<rslidar_msg::msg::RslidarPacket>(ros_recv_topic, 100, 
-      std::bind(&SourcePacketRos::putPacket, this, std::placeholders::_1));
-  subscription_spin_thread_ = std::thread(std::bind(&SourcePacketRos::spin,this));
-} 
-
-void SourcePacketRos::putPacket(const rslidar_msg::msg::RslidarPacket::SharedPtr msg) const
-{
-  driver_ptr_->decodePacket(toRsMsg(*msg));
-}
 
 inline rslidar_msg::msg::RslidarPacket toRosMsg(const Packet& rs_msg, const std::string& frame_id)
 {
@@ -305,6 +286,7 @@ inline rslidar_msg::msg::RslidarPacket toRosMsg(const Packet& rs_msg, const std:
 class DestinationPacketRos : public DestinationPacket
 {
 public:
+  explicit DestinationPacketRos(rclcpp::Node & node) : node_(node) {}
 
   virtual void init(const YAML::Node& config);
   virtual void sendPacket(const Packet& msg);
@@ -312,7 +294,7 @@ public:
 
 private:
 
-  std::shared_ptr<rclcpp::Node> node_ptr_;
+  rclcpp::Node & node_;
   rclcpp::Publisher<rslidar_msg::msg::RslidarPacket>::SharedPtr pkt_pub_;
   std::string frame_id_;
 };
@@ -329,12 +311,8 @@ inline void DestinationPacketRos::init(const YAML::Node& config)
   size_t ros_queue_length;
   yamlRead<size_t>(config["ros"], "ros_queue_length", ros_queue_length, 100);
 
-  static int node_index = 0;
-  std::stringstream node_name;
-  node_name << "rslidar_packets_destination_" << node_index++;
 
-  node_ptr_.reset(new rclcpp::Node(node_name.str()));
-  pkt_pub_ = node_ptr_->create_publisher<rslidar_msg::msg::RslidarPacket>(ros_send_topic, ros_queue_length);
+  pkt_pub_ = node_.create_publisher<rslidar_msg::msg::RslidarPacket>(ros_send_topic, ros_queue_length);
 }
 
 inline void DestinationPacketRos::sendPacket(const Packet& msg)

@@ -166,7 +166,7 @@ inline void SourceDriver::init(const YAML::Node& config)
   if (!driver_ptr_->init(driver_param))
   {
     RS_ERROR << "Driver Initialize Error...." << RS_REND;
-    exit(-1);
+    throw std::runtime_error("Driver initialization failed");
   }
 }
 

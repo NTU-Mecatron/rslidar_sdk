@@ -33,6 +33,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #pragma once
 
 #include <yaml-cpp/yaml.h>
+#include <stdexcept>
 
 #include "utility/common.hpp"
 
@@ -48,7 +49,7 @@ inline void yamlReadAbort(const YAML::Node& yaml, const std::string& key, T& out
   {
     RS_ERROR << " : Not set " << key;
     RS_ERROR << " value, Aborting!!!" << RS_REND;
-    exit(-1);
+    throw std::runtime_error("Missing required YAML entry");
   }
   else
   {
@@ -77,7 +78,7 @@ inline YAML::Node yamlSubNodeAbort(const YAML::Node& yaml, const std::string& no
   if (!ret)
   {
     RS_ERROR << " : Cannot find subnode " << node << ". Aborting!!!" << RS_REND;
-    exit(-1);
+    throw std::runtime_error("Missing required YAML entry");
   }
   return ret;
 }
