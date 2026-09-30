@@ -139,6 +139,8 @@ if(rclcpp_FOUND)
   set(CMAKE_CXX_STANDARD 14)
 
   find_package(ament_cmake REQUIRED)
+  find_package(rclcpp_components REQUIRED)
+  find_package(ament_index_cpp REQUIRED)
   find_package(sensor_msgs REQUIRED)
   find_package(rslidar_msg REQUIRED)
   find_package(std_msgs REQUIRED)                      
@@ -164,14 +166,6 @@ include_directories(${rs_driver_INCLUDE_DIRS})
 # Build Setup
 #========================
 
-add_executable(rslidar_sdk_node
-               node/rslidar_sdk_node.cpp
-               src/manager/node_manager.cpp)
-
-target_link_libraries(rslidar_sdk_node                   
-                      ${YAML_CPP_LIBRARIES}
-                      ${rs_driver_LIBRARIES})
-
 #Ros#
 if(roscpp_FOUND)
 
@@ -188,19 +182,38 @@ endif(roscpp_FOUND)
 #Ros2#
 if(rclcpp_FOUND)
 
-  ament_target_dependencies(rslidar_sdk_node 
-    rclcpp 
-    std_msgs 
-    sensor_msgs 
-    rslidar_msg)
+# =============================================================================
+# Component Library
+# =============================================================================
 
-  install(TARGETS
-    rslidar_sdk_node
-    DESTINATION lib/${PROJECT_NAME})
+  add_library(rslidar_component SHARED
+    node/rslidar_component.cpp
+    src/manager/node_manager.cpp)
+
+  target_link_libraries(rslidar_component ${YAML_CPP_LIBRARIES} ${rs_driver_LIBRARIES})
+
+  ament_target_dependencies(rslidar_component
+    rclcpp rclcpp_components ament_index_cpp std_msgs sensor_msgs rslidar_msg)
+
+# =============================================================================
+# Register Component
+# =============================================================================
+
+  rclcpp_components_register_node(
+    rslidar_component 
+    PLUGIN "robosense::lidar::RslidarComponent"
+    EXECUTABLE rslidar_component_node)
+
+# =============================================================================
+# Installation
+# =============================================================================
+
+  install(TARGETS rslidar_component
+    LIBRARY DESTINATION lib)
 
   install(DIRECTORY
+    config
     launch
-    rviz
     DESTINATION share/${PROJECT_NAME})
 
   ament_package()

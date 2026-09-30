@@ -61,7 +61,10 @@ void NodeManager::init(const YAML::Node& config)
 
   YAML::Node lidar_config = yamlSubNodeAbort(config, "lidar");
 
-  for (uint8_t i = 0; i < lidar_config.size(); ++i)
+  if (!lidar_config.IsSequence() || lidar_config.size() == 0)
+    throw std::runtime_error("lidar yaml node must be a nonempty sequence");
+
+  for (size_t i = 0; i < lidar_config.size(); ++i)
   {
     std::shared_ptr<Source> source;
 
@@ -86,7 +89,7 @@ void NodeManager::init(const YAML::Node& config)
         RS_INFO << "Msop Topic: " << lidar_config[i]["ros"]["ros_recv_packet_topic"].as<std::string>() << RS_REND;
         RS_INFO << "------------------------------------------------------" << RS_REND;
 
-        source = std::make_shared<SourcePacketRos>();
+        source = std::make_shared<SourcePacketRos>(node_);
         source->init(lidar_config[i]);
         break;
 
@@ -104,7 +107,7 @@ void NodeManager::init(const YAML::Node& config)
 
       default:
         RS_ERROR << "Unsupported LiDAR message source:" << msg_source << "." << RS_REND;
-        exit(-1);
+        throw std::runtime_error("Unsupported LiDAR message source");
     }
 
     if (send_packet_ros)
@@ -114,7 +117,7 @@ void NodeManager::init(const YAML::Node& config)
       RS_DEBUG << "Msop Topic: " << lidar_config[i]["ros"]["ros_send_packet_topic"].as<std::string>() << RS_REND;
       RS_DEBUG << "------------------------------------------------------" << RS_REND;
 
-      std::shared_ptr<DestinationPacket> dst = std::make_shared<DestinationPacketRos>();
+      std::shared_ptr<DestinationPacket> dst = std::make_shared<DestinationPacketRos>(node_);
       dst->init(lidar_config[i]);
       source->regPacketCallback(dst);
     }
@@ -127,7 +130,7 @@ void NodeManager::init(const YAML::Node& config)
                << RS_REND;
       RS_DEBUG << "------------------------------------------------------" << RS_REND;
 
-      std::shared_ptr<DestinationPointCloud> dst = std::make_shared<DestinationPointCloudRos>();
+      std::shared_ptr<DestinationPointCloud> dst = std::make_shared<DestinationPointCloudRos>(node_);
       dst->init(lidar_config[i]);
       source->regPointCloudCallback(dst);
     }

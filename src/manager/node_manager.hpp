@@ -34,6 +34,8 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "utility/yaml_reader.hpp"
 #include "source/source.hpp"
+#include <rclcpp/rclcpp.hpp>
+
 
 namespace robosense
 {
@@ -44,14 +46,17 @@ class NodeManager
 {
 public:
 
+  explicit NodeManager(rclcpp::Node & node) : node_(node) {}
+
   void init(const YAML::Node& config);
   void start();
   void stop();
 
   ~NodeManager();
-  NodeManager() = default;
 
 private:
+
+  rclcpp::Node & node_;
 
   std::vector<Source::Ptr> sources_;
 };
